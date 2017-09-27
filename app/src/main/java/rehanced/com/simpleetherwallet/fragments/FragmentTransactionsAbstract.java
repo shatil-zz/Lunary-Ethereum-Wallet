@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import rehanced.com.simpleetherwallet.AppSettings;
 import rehanced.com.simpleetherwallet.R;
 import rehanced.com.simpleetherwallet.activities.AddressDetailActivity;
 import rehanced.com.simpleetherwallet.activities.AnalyticsApplication;
@@ -214,7 +215,7 @@ public abstract class FragmentTransactionsAbstract extends Fragment implements V
                startActivity(i);
                break;
            } case 102: { // Open in Browser
-               String url = "https://etherscan.io/tx/" + wallets.get(position).getTxHash();
+               String url = AppSettings.BASE_URL+"tx/" + wallets.get(position).getTxHash();
                Intent i = new Intent(Intent.ACTION_VIEW);
                i.setData(Uri.parse(url));
                startActivity(i);

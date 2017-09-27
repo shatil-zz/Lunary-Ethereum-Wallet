@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 import me.grantland.widget.AutofitTextView;
+import rehanced.com.simpleetherwallet.AppSettings;
 import rehanced.com.simpleetherwallet.R;
 import rehanced.com.simpleetherwallet.activities.AddressDetailActivity;
 import rehanced.com.simpleetherwallet.activities.MainActivity;
@@ -131,7 +132,7 @@ public class Dialogs {
         openInBrowser.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String url = "https://etherscan.io/tx/" + tx.getTxHash();
+                String url = AppSettings.BASE_URL+"tx/" + tx.getTxHash();
                 Intent i = new Intent(Intent.ACTION_VIEW);
                 i.setData(Uri.parse(url));
                 c.startActivity(i);
