@@ -183,6 +183,16 @@
             fab:menu_colorRipple="@color/colorAccent"
             fab:fab_label="@string/fab_scan" />
 
+        <com.github.clans.fab.FloatingActionButton
+            android:id="@+id/export_wallet"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_new_tr"
+            fab:fab_label="@string/wallet_menu_export"
+            fab:menu_colorNormal="@color/colorPrimary"
+            fab:menu_colorPressed="@color/colorAccent2"
+            fab:menu_colorRipple="@color/colorAccent" />
+
 
     </com.github.clans.fab.FloatingActionMenu>
     </RelativeLayout>

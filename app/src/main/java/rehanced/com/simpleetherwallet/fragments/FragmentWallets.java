@@ -140,6 +140,7 @@ public class FragmentWallets extends Fragment implements View.OnClickListener, V
         walletAdapter.notifyDataSetChanged();
 
         final FloatingActionMenu fabmenu = (FloatingActionMenu) rootView.findViewById(R.id.fabmenu);
+        FloatingActionButton export_fab = (FloatingActionButton) rootView.findViewById(R.id.export_wallet);
         FloatingActionButton scan_fab = (FloatingActionButton) rootView.findViewById(R.id.scan_fab);
         FloatingActionButton add_fab = (FloatingActionButton) rootView.findViewById(R.id.add_fab);
         FloatingActionButton gen_fab = (FloatingActionButton) rootView.findViewById(R.id.gen_fab);
@@ -157,6 +158,24 @@ public class FragmentWallets extends Fragment implements View.OnClickListener, V
                 Intent scanQR = new Intent(ac, QRScanActivity.class);
                 scanQR.putExtra("TYPE", QRScanActivity.SCAN_ONLY);
                 ac.startActivityForResult(scanQR, QRScanActivity.REQUEST_CODE);
+            }
+        });
+        export_fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final int finalPosition = 0;
+                if(wallets.get(finalPosition).getType() == WalletDisplay.NORMAL) {
+                    Dialogs.exportWallet(ac, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            WalletStorage.getInstance(ac).setWalletForExport(wallets.get(finalPosition).getPublicKey());
+                            export();
+                            dialog.dismiss();
+                        }
+                    });
+                } else {
+                    Dialogs.cantExportNonWallet(ac);
+                }
             }
         });
         add_fab.setOnClickListener(new View.OnClickListener() {
