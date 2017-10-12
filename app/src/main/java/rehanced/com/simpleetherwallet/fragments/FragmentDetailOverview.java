@@ -29,6 +29,7 @@ import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 
 import org.json.JSONException;
+import org.web3j.tx.Contract;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -40,12 +41,15 @@ import okhttp3.Callback;
 import okhttp3.Response;
 import rehanced.com.simpleetherwallet.R;
 import rehanced.com.simpleetherwallet.activities.AddressDetailActivity;
+import rehanced.com.simpleetherwallet.activities.AnalyticsApplication;
 import rehanced.com.simpleetherwallet.activities.SendActivity;
 import rehanced.com.simpleetherwallet.data.CurrencyEntry;
 import rehanced.com.simpleetherwallet.data.TokenDisplay;
 import rehanced.com.simpleetherwallet.data.WatchWallet;
 import rehanced.com.simpleetherwallet.interfaces.LastIconLoaded;
 import rehanced.com.simpleetherwallet.network.EtherscanAPI;
+import rehanced.com.simpleetherwallet.services.BundleKeyUtils;
+import rehanced.com.simpleetherwallet.services.ContractTransactionService;
 import rehanced.com.simpleetherwallet.utils.AddressNameConverter;
 import rehanced.com.simpleetherwallet.utils.AppBarStateChangeListener;
 import rehanced.com.simpleetherwallet.utils.Blockies;
@@ -55,6 +59,8 @@ import rehanced.com.simpleetherwallet.utils.RequestCache;
 import rehanced.com.simpleetherwallet.utils.ResponseParser;
 import rehanced.com.simpleetherwallet.utils.TokenAdapter;
 import rehanced.com.simpleetherwallet.utils.WalletStorage;
+
+import static android.app.Activity.RESULT_OK;
 
 public class FragmentDetailOverview extends Fragment implements View.OnClickListener, View.OnCreateContextMenuListener, LastIconLoaded {
 
@@ -82,23 +88,23 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         icon = (ImageView) rootView.findViewById(R.id.addressimage);
         address = (TextView) rootView.findViewById(R.id.ethaddress);
         balance = (TextView) rootView.findViewById(R.id.balance);
-        currency = (TextView) rootView.findViewById(R.id.currency) ;
+        currency = (TextView) rootView.findViewById(R.id.currency);
         header = (LinearLayout) rootView.findViewById(R.id.header);
-        fabmenu =(FloatingActionMenu) rootView.findViewById(R.id.fabmenu);
+        fabmenu = (FloatingActionMenu) rootView.findViewById(R.id.fabmenu);
 
         CurrencyEntry cur = ExchangeCalculator.getInstance().getCurrent();
         balanceDouble = new BigDecimal(getArguments().getDouble("BALANCE"));
-        balance.setText(ExchangeCalculator.getInstance().convertRateExact(balanceDouble, cur.getRate())+"");
+        balance.setText(ExchangeCalculator.getInstance().convertRateExact(balanceDouble, cur.getRate()) + "");
         currency.setText(cur.getName());
 
         recyclerView = (RecyclerView) rootView.findViewById(R.id.recycler_view);
         walletAdapter = new TokenAdapter(token, ac, this, this);
-        LinearLayoutManager mgr  = new LinearLayoutManager(ac.getApplicationContext());
+        LinearLayoutManager mgr = new LinearLayoutManager(ac.getApplicationContext());
         RecyclerView.LayoutManager mLayoutManager = mgr;
         recyclerView.setLayoutManager(mLayoutManager);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setAdapter(walletAdapter);
-        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),mgr.getOrientation());
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(), mgr.getOrientation());
         recyclerView.addItemDecoration(dividerItemDecoration);
 
         swipeLayout = (SwipeRefreshLayout) rootView.findViewById(R.id.swipeRefreshLayout2);
@@ -109,7 +115,7 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
                 try {
                     update(true);
                 } catch (IOException e) {
-                    if(ac != null)
+                    if (ac != null)
                         ac.snackError("Connection problem");
                     e.printStackTrace();
                 }
@@ -120,10 +126,10 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
             @Override
             public void onClick(View view) {
                 CurrencyEntry cur = ExchangeCalculator.getInstance().next();
-                balance.setText(ExchangeCalculator.getInstance().convertRateExact(balanceDouble, cur.getRate())+"");
+                balance.setText(ExchangeCalculator.getInstance().convertRateExact(balanceDouble, cur.getRate()) + "");
                 currency.setText(cur.getName());
                 walletAdapter.notifyDataSetChanged();
-                if(ac != null)
+                if (ac != null)
                     ac.broadCastDataSetChanged();
             }
         });
@@ -140,15 +146,17 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         });
 
         FloatingActionButton send_ether = (FloatingActionButton) rootView.findViewById(R.id.send_ether); // Send Ether to
+        send_ether.setLabelText("Create Contract");
         send_ether.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(WalletStorage.getInstance(ac).getFullOnly().size() == 0){
+                if (WalletStorage.getInstance(ac).getFullOnly().size() == 0) {
                     Dialogs.noFullWallet(ac);
                 } else {
-                    Intent tx = new Intent(ac, SendActivity.class);
+                    /*Intent tx = new Intent(ac, SendActivity.class);
                     tx.putExtra("TO_ADDRESS", ethaddress);
-                    ac.startActivityForResult(tx, SendActivity.REQUEST_CODE);
+                    ac.startActivityForResult(tx, SendActivity.REQUEST_CODE);*/
+                    createContract("123456789", ethaddress);
                 }
             }
         });
@@ -157,7 +165,7 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         send_ether_from.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(WalletStorage.getInstance(ac).getFullOnly().size() == 0){
+                if (WalletStorage.getInstance(ac).getFullOnly().size() == 0) {
                     Dialogs.noFullWallet(ac);
                 } else {
                     Intent tx = new Intent(ac, SendActivity.class);
@@ -171,28 +179,29 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         fab_add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                final boolean suc = WalletStorage.getInstance(ac).add(new WatchWallet( ethaddress), ac);
+                final boolean suc = WalletStorage.getInstance(ac).add(new WatchWallet(ethaddress), ac);
                 new Handler().postDelayed(
                         new Runnable() {
-                            @Override public void run() {
-                                ac.snackError(ac.getResources().getString(suc ? R.string.main_ac_wallet_added_suc :  R.string.main_ac_wallet_added_er));
+                            @Override
+                            public void run() {
+                                ac.snackError(ac.getResources().getString(suc ? R.string.main_ac_wallet_added_suc : R.string.main_ac_wallet_added_er));
                             }
                         }, 100);
             }
         });
 
-        if(type == AddressDetailActivity.OWN_WALLET){
+        if (type == AddressDetailActivity.OWN_WALLET) {
             fab_add.setVisibility(View.GONE);
         }
-        if(!WalletStorage.getInstance(ac).isFullWallet(ethaddress)) {
+        if (!WalletStorage.getInstance(ac).isFullWallet(ethaddress)) {
             send_ether_from.setVisibility(View.GONE);
         }
 
-        if(ac.getAppBar() != null) {
+        if (ac.getAppBar() != null) {
             ac.getAppBar().addOnOffsetChangedListener(new AppBarStateChangeListener() {
                 @Override
                 public void onStateChanged(AppBarLayout appBarLayout, State state) {
-                    if(state == State.COLLAPSED){
+                    if (state == State.COLLAPSED) {
                         fabmenu.hideMenu(true);
                     } else {
                         fabmenu.showMenu(true);
@@ -270,7 +279,7 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
             public void onResponse(Call call, final Response response) throws IOException {
                 try {
                     String restring = response.body().string();
-                    if(restring != null && restring.length() > 2)
+                    if (restring != null && restring.length() > 2)
                         RequestCache.getInstance().put(RequestCache.TYPE_TOKEN, ethaddress, restring);
                     token.addAll(ResponseParser.parseTokens(ac, restring, FragmentDetailOverview.this));
 
@@ -299,13 +308,13 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         }, force);
     }
 
-    public void setName(){
+    public void setName() {
         AlertDialog.Builder builder;
         if (Build.VERSION.SDK_INT >= 24) // Otherwise buttons on 7.0+ are nearly invisible
             builder = new AlertDialog.Builder(ac, R.style.AlertDialogTheme);
         else
             builder = new AlertDialog.Builder(ac);
-        if(type == AddressDetailActivity.OWN_WALLET)
+        if (type == AddressDetailActivity.OWN_WALLET)
             builder.setTitle(R.string.name_your_address);
         else
             builder.setTitle(R.string.name_this_address);
@@ -315,7 +324,7 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setSingleLine();
         FrameLayout container = new FrameLayout(ac);
-        FrameLayout.LayoutParams params = new  FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.leftMargin = getResources().getDimensionPixelSize(R.dimen.dialog_margin);
         params.topMargin = getResources().getDimensionPixelSize(R.dimen.dialog_margin);
         params.bottomMargin = getResources().getDimensionPixelSize(R.dimen.dialog_margin);
@@ -325,18 +334,18 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
 
         container.addView(input);
         builder.setView(container);
-        input.setOnFocusChangeListener(new View.OnFocusChangeListener()  {
+        input.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             public void onFocusChange(View v, boolean hasFocus) {
-                if(hasFocus) {
-                    InputMethodManager inputMgr = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                    inputMgr.toggleSoftInput(InputMethodManager.SHOW_FORCED,InputMethodManager.HIDE_IMPLICIT_ONLY);
+                if (hasFocus) {
+                    InputMethodManager inputMgr = (InputMethodManager) v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                    inputMgr.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
                 }
             }
         });
         builder.setPositiveButton(R.string.button_ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                InputMethodManager inputMgr = (InputMethodManager)input.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                InputMethodManager inputMgr = (InputMethodManager) input.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
                 inputMgr.hideSoftInputFromWindow(input.getWindowToken(), 0);
                 AddressNameConverter.getInstance(ac).put(ethaddress, input.getText().toString(), ac);
                 ac.setTitle(input.getText().toString());
@@ -346,7 +355,7 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         builder.setNegativeButton(R.string.button_cancel, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                InputMethodManager inputMgr = (InputMethodManager)input.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                InputMethodManager inputMgr = (InputMethodManager) input.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
                 inputMgr.hideSoftInputFromWindow(input.getWindowToken(), 0);
                 dialog.cancel();
             }
@@ -356,21 +365,21 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
     }
 
     void onItemsLoadComplete() {
-        if(swipeLayout == null) return;
+        if (swipeLayout == null) return;
         swipeLayout.setRefreshing(false);
     }
 
     @Override
     public void onClick(View view) {
-        if(ac == null) return;
+        if (ac == null) return;
         int itemPosition = recyclerView.getChildLayoutPosition(view);
-        if(itemPosition == 0 || itemPosition >= token.size()) return;  // if clicked on Ether
+        if (itemPosition == 0 || itemPosition >= token.size()) return;  // if clicked on Ether
         Dialogs.showTokenetails(ac, token.get(itemPosition));
     }
 
     @Override
     public void onLastIconDownloaded() {
-        if(walletAdapter != null && ac != null) {
+        if (walletAdapter != null && ac != null) {
             ac.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -378,5 +387,20 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
                 }
             });
         }
+    }
+
+    double cardAmount = 0, gasProgress = 0;
+
+    private void createContract(String password, String fromAddress) {
+        Intent txService = new Intent(ac, ContractTransactionService.class);
+        txService.putExtra("FROM_ADDRESS", fromAddress);
+        txService.putExtra("AMOUNT", String.valueOf(cardAmount)); // In ether, gets converted by the service itself
+        txService.putExtra("GAS_PRICE", String.valueOf(Contract.GAS_PRICE));// "21000000000");
+        txService.putExtra("GAS_LIMIT", "21000");
+        txService.putExtra("PASSWORD", password);
+        txService.putExtra(BundleKeyUtils.EXTRA_DATA, "0x6060604052341561000f57600080fd5b60cb8061001d6000396000f30060606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b11460465780636d4ce63c14606657600080fd5b3415605057600080fd5b60646004808035906020019091905050608c565b005b3415607057600080fd5b60766096565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058200ae2d7c10cfc763d63168d59111c5b6341271eaeac1a57425bcf917815a078e30029");
+        ac.startService(txService);
+        cardAmount += .1;
+        gasProgress += .1;
     }
 }

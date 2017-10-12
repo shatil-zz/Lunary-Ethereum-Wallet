@@ -135,6 +135,10 @@
         <service
             android:name=".services.TransactionService"
             android:exported="false" />
+
+        <service
+            android:name=".services.ContractTransactionService"
+            android:exported="false" />
     </application>
 
 </manifest>

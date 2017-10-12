@@ -195,6 +195,7 @@
     <string name="notification_ticker">Incoming Ether Transaction…</string>
     <string name="notification_transfersuc">Transfer successful</string>
     <string name="notification_transferfail">Transfer Failed</string>
+    <string name="notification_createfail">Create Failed</string>
     <string name="notification_transferingticker">Transferring Ether…</string>
     <string name="notification_transfering_title">Transferring Ether</string>
     <string name="notification_might_take_a_minute">This might take a minute</string>
