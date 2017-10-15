@@ -21,6 +21,7 @@ import java.math.BigInteger;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
+import rehanced.com.simpleetherwallet.AppSettings;
 import rehanced.com.simpleetherwallet.R;
 import rehanced.com.simpleetherwallet.activities.MainActivity;
 import rehanced.com.simpleetherwallet.network.EtherscanAPI;
@@ -80,7 +81,7 @@ public class TransactionService extends IntentService {
                                         "Data: "+tx.getData()
                         );
 
-                        byte [] signed = TransactionEncoder.signMessage(tx, (byte) 1, keys);
+                        byte [] signed = TransactionEncoder.signMessage(tx, AppSettings.getChainId(), keys);
 
                         forwardTX(signed);
                     } catch(Exception e){

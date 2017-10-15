@@ -23,4 +23,8 @@ public class AppSettings {
                 return "https://etherscan.io/";
         }
     }
+
+    public static byte getChainId() {
+        return APK_BUILD_MODE == BUILD_MODE_DEV ? (byte) 0X03 : (byte) 1;
+    }
 }

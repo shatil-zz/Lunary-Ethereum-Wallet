@@ -389,18 +389,14 @@ public class FragmentDetailOverview extends Fragment implements View.OnClickList
         }
     }
 
-    double cardAmount = 0, gasProgress = 0;
-
     private void createContract(String password, String fromAddress) {
         Intent txService = new Intent(ac, ContractTransactionService.class);
         txService.putExtra("FROM_ADDRESS", fromAddress);
-        txService.putExtra("AMOUNT", String.valueOf(cardAmount)); // In ether, gets converted by the service itself
+        txService.putExtra("AMOUNT", String.valueOf(0)); // In ether, gets converted by the service itself
         txService.putExtra("GAS_PRICE", String.valueOf(Contract.GAS_PRICE));// "21000000000");
         txService.putExtra("GAS_LIMIT", "21000");
         txService.putExtra("PASSWORD", password);
         txService.putExtra(BundleKeyUtils.EXTRA_DATA, "0x6060604052341561000f57600080fd5b60cb8061001d6000396000f30060606040526000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806360fe47b11460465780636d4ce63c14606657600080fd5b3415605057600080fd5b60646004808035906020019091905050608c565b005b3415607057600080fd5b60766096565b6040518082815260200191505060405180910390f35b8060008190555050565b600080549050905600a165627a7a723058200ae2d7c10cfc763d63168d59111c5b6341271eaeac1a57425bcf917815a078e30029");
         ac.startService(txService);
-        cardAmount += .1;
-        gasProgress += .1;
     }
 }
